@@ -1,6 +1,7 @@
 package querylog
 
 import (
+	"hash/maphash"
 	"net"
 	"path/filepath"
 	"time"
@@ -153,6 +154,7 @@ func newQueryLog(conf Config) (l *queryLog) {
 
 		logFile:    filepath.Join(conf.BaseDir, queryLogFileName),
 		anonymizer: conf.Anonymizer,
+		seed:       maphash.MakeSeed(),
 	}
 
 	l.conf = &Config{}

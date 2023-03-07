@@ -3,6 +3,7 @@ package querylog
 
 import (
 	"fmt"
+	"hash/maphash"
 	"net"
 	"os"
 	"strings"
@@ -34,6 +35,7 @@ type queryLog struct {
 	// buffer contains recent log entries.  The entries in this buffer must not
 	// be modified.
 	buffer []*logEntry
+	seed   maphash.Seed // seed used to generate logEntry hashs
 
 	fileFlushLock sync.Mutex // synchronize a file-flushing goroutine and main thread
 	flushPending  bool       // don't start another goroutine while the previous one is still running
@@ -99,6 +101,8 @@ type logEntry struct {
 
 	Cached            bool `json:",omitempty"`
 	AuthenticatedData bool `json:"AD,omitempty"`
+
+	UID uint64
 }
 
 // shallowClone returns a shallow clone of e.
@@ -227,23 +231,34 @@ func (l *queryLog) Add(params *AddParams) {
 		entry.OrigAnswer = a
 	}
 
-	l.bufferLock.Lock()
-	l.buffer = append(l.buffer, &entry)
-	needFlush := false
+	h := maphash.Hash{}
+	h.SetSeed(l.seed)
+	h.WriteString(entry.QHost)
+	h.WriteString("|")
+	h.WriteString(entry.ClientID)
+	h.WriteString("|")
+	h.WriteString(entry.Result.Reason.String())
+	entry.UID = h.Sum64()
 
-	if !l.conf.FileEnabled {
-		if len(l.buffer) > int(l.conf.MemSize) {
-			// writing to file is disabled - just remove the oldest entry from array
-			//
-			// TODO(a.garipov): This should be replaced by a proper ring buffer,
-			// but it's currently difficult to do that.
-			l.buffer[0] = nil
-			l.buffer = l.buffer[1:]
-		}
-	} else if !l.flushPending {
-		needFlush = len(l.buffer) >= int(l.conf.MemSize)
-		if needFlush {
-			l.flushPending = true
+	l.bufferLock.Lock()
+	needFlush := false
+	if len(l.buffer) == 0 || l.buffer[len(l.buffer)-1].UID != entry.UID {
+		l.buffer = append(l.buffer, &entry)
+
+		if !l.conf.FileEnabled {
+			if len(l.buffer) > int(l.conf.MemSize) {
+				// writing to file is disabled - just remove the oldest entry from array
+				//
+				// TODO(a.garipov): This should be replaced by a proper ring buffer,
+				// but it's currently difficult to do that.
+				l.buffer[0] = nil
+				l.buffer = l.buffer[1:]
+			}
+		} else if !l.flushPending {
+			needFlush = len(l.buffer) >= int(l.conf.MemSize)
+			if needFlush {
+				l.flushPending = true
+			}
 		}
 	}
 	l.bufferLock.Unlock()
