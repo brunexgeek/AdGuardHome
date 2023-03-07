@@ -121,6 +121,8 @@ const DomainCell = ({
 
     const details = [ip, protocol].filter(Boolean).join(', ');
 
+    const domainUrl = `http://${domain}`;
+
     return (
         <div
             className="d-flex o-hidden logs__cell logs__cell logs__cell--domain"
@@ -148,11 +150,11 @@ const DomainCell = ({
             <div className={valueClass}>
                 {unicodeName ? (
                     <div className="text-truncate overflow-break-mobile" title={unicodeName}>
-                        {unicodeName}
+                        <a href={domainUrl} target='_blank' rel="noreferrer">{unicodeName}</a>
                     </div>
                 ) : (
                     <div className="text-truncate overflow-break-mobile" title={domain}>
-                        {domain}
+                        <a href={domainUrl} target='_blank' rel="noreferrer">{domain}</a>
                     </div>
                 )}
                 {details && isDetailed && (
