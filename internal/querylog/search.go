@@ -91,8 +91,24 @@ func (l *queryLog) search(params *searchParams) (entries []*logEntry, oldest tim
 
 	// now let's get a unified collection
 	entries = append(memoryEntries, fileEntries...)
+	fileEntries = nil
+	memoryEntries = nil
+
+	if params.unique {
+		uentries := make([]*logEntry, 0)
+		ids := map[uint64]struct{}{}
+
+		for _, value := range entries {
+			if _, ok := ids[value.UID]; !ok {
+				uentries = append(uentries, value)
+				ids[value.UID] = struct{}{}
+			}
+		}
+		entries = uentries
+	}
+
+	// remove extra records
 	if len(entries) > totalLimit {
-		// remove extra records
 		entries = entries[:totalLimit]
 	}
 

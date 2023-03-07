@@ -247,5 +247,7 @@ func (l *queryLog) parseSearchParams(r *http.Request) (p *searchParams, err erro
 		}
 	}
 
+	p.unique = strings.ToLower(q.Get("unique")) == "true"
+
 	return p, nil
 }

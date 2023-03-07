@@ -11,9 +11,10 @@ type searchParams struct {
 	// if not set - disregard it and return any value
 	olderThan time.Time
 
-	offset             int // offset for the search
-	limit              int // limit the number of records returned
-	maxFileScanEntries int // maximum log entries to scan in query log files. if 0 - no limit
+	offset             int  // offset for the search
+	limit              int  // limit the number of records returned
+	maxFileScanEntries int  // maximum log entries to scan in query log files. if 0 - no limit
+	unique             bool // only returns the last ocurrency of any domain
 }
 
 // newSearchParams - creates an empty instance of searchParams
